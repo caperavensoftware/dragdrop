@@ -28,15 +28,14 @@
         .swapable {
             position: absolute;
             will-change: transform;
+            border-radius: 0.2rem;
+            background: #FFBB00;
+            color: white;
         }
 
         .selected {
             background: #FB0;
             color: #FB0;
-        }
-
-        .red {
-            color: red;
         }
 
         #animation-layer {
@@ -115,7 +114,6 @@
                     const elementRect = element.getBoundingClientRect();
                     this.dragClone = element.cloneNode(true);
                     this.dragClone.style.transform = `translate(${elementRect.left}px, ${elementRect.top}px)`;
-                    this.dragClone.classList.add("red");
                     this.dragClone.classList.add("swapable");
                     this.animationLayer.appendChild(this.dragClone);
                 }

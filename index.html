@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Drag Drop</title>
+    <style>
+        body {
+            font-size: 16px;
+        }
+
+        ul {
+            list-style: none;
+            user-select: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        li {
+            cursor: pointer;
+            padding: 0.25rem;
+            display: block;
+            transition: transform 0.2s ease-out;
+        }
+
+        .swapable {
+            position: absolute;
+            will-change: transform;
+        }
+
+        .selected {
+            background: #FB0;
+            color: #FB0;
+        }
+
+        .red {
+            color: red;
+        }
+
+        #animation-layer {
+            position: absolute;
+            top:0;
+            left:0;
+            right:0;
+            bottom:0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <ul id="list">
+        <li>Item 1</li>
+        <li>Item 2</li>
+        <li>Item 3</li>
+        <li>Item 4</li>
+        <li>Item 5</li>
+        <li>Item 6</li>
+        <li>Item 7</li>
+    </ul>
+
+    <div id="animation-layer"></div>
+
+    <script>
+        class DragDropList {
+            get elementBeingDragged() {
+                return this._elementBeingDraged;
+            }
+
+            set elementBeingDragged(value) {
+                this._elementBeingDraged = value;
+
+                if (value) {
+                    this._elementBeingDraged.style.opacity = 0;
+                }
+
+                this.isDraging = value !== null;
+            }
+
+            constructor(elementId) {
+                this.list = document.getElementById("list");
+                this.animationLayer = document.getElementById("animation-layer");
+
+                this.mouseUpHandler = this.handleMouseUp.bind(this);
+                this.mouseDownHandler = this.handleMouseDown.bind(this);
+                this.mouseMoveHandler = this.handleMouseMove.bind(this);
+
+                this.list.addEventListener("mouseup", this.mouseUpHandler);
+                this.list.addEventListener("mousedown", this.mouseDownHandler);
+
+                this.hoverElement = {
+                    element: null,
+                    rect: null
+                };
+
+                this.isBusy = false;
+            }
+
+            destroy() {
+                this.list.removeEventListener("mouseup", this.mouseUpHandler);
+                this.list.removeEventListener("mousedown", this.mouseDownHandler);
+
+                this.mouseUpHandler = null;
+                this.mouseDownHandler = null;
+                this.mouseMoveHandler = null;
+
+                this.list = null;
+                this.animationLayer = null;
+                this.hoverElement = null;
+            }
+
+            handleMouseUp(event) {
+                this.list.removeEventListener("mousemove", this.mouseMoveHandler);
+                this.elementBeingDragged.style.opacity = 1;
+                this.elementBeingDragged = null;
+            }
+
+            handleMouseDown(event) {
+                if (event.target.tagName !== "LI") {
+                    return;
+                }
+                this.list.addEventListener("mousemove", this.mouseMoveHandler);
+
+                this.elementBeingDragged = event.target;
+            }
+
+            handleMouseMove(event) {
+                if (!this.isBusy) {
+                    this.processTarget(event.target, event.clientX, event.clientY);
+                }
+            }
+
+            setOldHoverElement(element) {
+                if (this.hoverElement.element !== element) {
+                    this.hoverElement = {
+                        element: element,
+                        rect: element.getBoundingClientRect()
+                    }
+                }
+            }
+
+            processTarget(element, x, y) {
+                return new Promise(resolve => {
+                    this.setOldHoverElement(element);
+
+                    if (this.hoverElement.element !== this.elementBeingDragged) {
+                        const offset = this.hoverElement.rect.height / 3;
+
+                        if (y < this.hoverElement.rect.top + offset)
+                        {
+                            this.insertBefore()
+                        }
+                        else
+                        {
+                            this.insertAfter();
+                        }
+
+                    }
+
+                    resolve();
+                });
+            }
+
+            insertBefore() {
+                this.isBusy = true;
+
+                this.swapElements(this.elementBeingDragged, this.hoverElement.element);
+
+                this.isBusy = false;
+            }
+
+            insertAfter() {
+                this.isBusy = true;
+
+                this.swapElements(this.hoverElement.element, this.elementBeingDragged);
+
+                this.isBusy = false;
+            }
+
+            swapElements(elementToMove, elementTarget) {
+                this.list.removeChild(elementToMove);
+                this.list.insertBefore(elementToMove, elementTarget);
+            }
+
+            swap(topElement, bottomElement) {
+                if (!topElement || !bottomElement) {
+                    return;
+                }
+
+                const topRect = topElement.getBoundingClientRect();
+                const bottomRect = bottomElement.getBoundingClientRect();
+
+                const topClone = topElement.cloneNode(true);
+                topClone.style.transform = `translate(${topRect.left}px, ${topRect.top}px)`;
+                topClone.classList.add("red");
+                topClone.classList.add("swapable");
+
+                const bottomClone = bottomElement.cloneNode(true);
+                bottomClone.style.transform = `translate(${bottomRect.left}px, ${bottomRect.top}px)`;
+                bottomClone.classList.add("red");
+                bottomClone.classList.add("swapable");
+
+                const fragment = document.createDocumentFragment();
+                fragment.appendChild(topClone);
+                fragment.appendChild(bottomClone);
+
+                this.animationLayer.appendChild(fragment);
+
+                topElement.style.opacity = 0;
+                bottomElement.style.opacity = 0;
+
+                this.elementBeingDragged = topElement;
+
+                const startAnimation = setTimeout(_ => {
+                    topClone.style.transform = `translate(${bottomRect.left}px, ${bottomRect.top}px)`;
+                    bottomClone.style.transform = `translate(${topRect.left}px, ${topRect.top}px)`;
+                    clearTimeout(startAnimation);
+                }, 1);
+            }
+        }
+
+        new DragDropList("list");
+    </script>
+</body>
+</html>

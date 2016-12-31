@@ -71,11 +71,11 @@
             set elementBeingDragged(value) {
                 this._elementBeingDraged = value;
 
+                this.setDragClone(value);
+
                 if (value) {
                     this._elementBeingDraged.style.opacity = 0;
                 }
-
-                this.isDraging = value !== null;
             }
 
             constructor(elementId) {
@@ -110,6 +110,22 @@
                 this.hoverElement = null;
             }
 
+            setDragClone(element) {
+                if (element) {
+                    const elementRect = element.getBoundingClientRect();
+                    this.dragClone = element.cloneNode(true);
+                    this.dragClone.style.transform = `translate(${elementRect.left}px, ${elementRect.top}px)`;
+                    this.dragClone.classList.add("red");
+                    this.dragClone.classList.add("swapable");
+                    this.animationLayer.appendChild(this.dragClone);
+                }
+                else
+                {
+                    this.animationLayer.removeChild(this.dragClone);
+                    this.dragClone = null;
+                }
+            }
+
             handleMouseUp(event) {
                 this.list.removeEventListener("mousemove", this.mouseMoveHandler);
                 this.elementBeingDragged.style.opacity = 1;
@@ -127,6 +143,7 @@
 
             handleMouseMove(event) {
                 if (!this.isBusy) {
+                    this.dragClone.style.transform = `translate(${event.clientX}px, ${event.clientY}px)`;
                     this.processTarget(event.target, event.clientX, event.clientY);
                 }
             }
@@ -181,42 +198,6 @@
             swapElements(elementToMove, elementTarget) {
                 this.list.removeChild(elementToMove);
                 this.list.insertBefore(elementToMove, elementTarget);
-            }
-
-            swap(topElement, bottomElement) {
-                if (!topElement || !bottomElement) {
-                    return;
-                }
-
-                const topRect = topElement.getBoundingClientRect();
-                const bottomRect = bottomElement.getBoundingClientRect();
-
-                const topClone = topElement.cloneNode(true);
-                topClone.style.transform = `translate(${topRect.left}px, ${topRect.top}px)`;
-                topClone.classList.add("red");
-                topClone.classList.add("swapable");
-
-                const bottomClone = bottomElement.cloneNode(true);
-                bottomClone.style.transform = `translate(${bottomRect.left}px, ${bottomRect.top}px)`;
-                bottomClone.classList.add("red");
-                bottomClone.classList.add("swapable");
-
-                const fragment = document.createDocumentFragment();
-                fragment.appendChild(topClone);
-                fragment.appendChild(bottomClone);
-
-                this.animationLayer.appendChild(fragment);
-
-                topElement.style.opacity = 0;
-                bottomElement.style.opacity = 0;
-
-                this.elementBeingDragged = topElement;
-
-                const startAnimation = setTimeout(_ => {
-                    topClone.style.transform = `translate(${bottomRect.left}px, ${bottomRect.top}px)`;
-                    bottomClone.style.transform = `translate(${topRect.left}px, ${topRect.top}px)`;
-                    clearTimeout(startAnimation);
-                }, 1);
             }
         }
 
